@@ -13,25 +13,29 @@ export interface ConfigSchema {
   /**
    * The command to execute the script, must include the placeholder '${post}' and can have any file extension or none.
    */
-  execScriptCommand: string;
+  execScriptCommand?: string;
   /**
    * The output directory for the generated migrations. Must be a valid directory path.
    */
-  outputDir: string;
+  outputDir?: string;
   /**
    * The directory where migrations are stored. Must be a valid directory path.
    */
-  migrationsDir: string;
+  migrationsDir?: string;
   /**
    * Temporary directory for processing. Must be a valid directory path.
    */
-  tempDir: string;
+  tempDir?: string;
   /**
-   * The filename for prisma schema files within migration directories.
+   * The filename for prisma schema files within migration directories. Defaults to schema.prisma
    */
-  migrationSchemaFileName: string;
+  migrationSchemaFileName?: string;
+  /**
+   * The main Prisma schema file for prisma migrations. Must be a valid file path.
+   */
+  mainPrismaSchema?: string;
   /**
    * Log level for the script, must be one of 'info', 'debug', or 'error'.
    */
-  log: "none" | "info" | "verbose";
+  log?: "none" | "info" | "verbose";
 }

@@ -9,9 +9,8 @@ const defaultConfig: Record<string, any> = {};
 validate(defaultConfig);
 
 if (validate.errors) {
-  throw new Error(
-    "Invalid default configuration: " + JSON.stringify(validate.errors, null, 2)
-  );
+  throw new Error("Invalid default configuration: " + JSON.stringify(validate.errors, null, 2));
 }
 
-export const DEFAULT_CONFIG = defaultConfig as ConfigSchema;
+export type ConfigT = Required<ConfigSchema>;
+export const DEFAULT_CONFIG = defaultConfig as Required<ConfigSchema>;
