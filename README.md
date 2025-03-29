@@ -168,8 +168,9 @@ The configuration file (`prisma-dm.config.json`) allows customization of the lib
   - For `.ts` scripts: `"tsx ${post}.ts"`
   - For shell scripts: `"sh ${post}.sh"`
 
-- **`outputDir`**: Directory for generated migration files.  
-  - **Default**: `../../../node_modules/prisma-data-migrations/migrations`.  
+- **`outputDir`**: Directory for generated migration files.
+
+  - **Default**: `../../../node_modules/prisma-data-migrations/migrations`.
   - **Note**: This path is specified **relative to** the `migrations/{some_migration}/schema.prisma` file, as it is the value of the `output` parameter in the Prisma schema settings block.
 
 - **`migrationsDir`**: Directory containing Prisma migrations. Default: `prisma/migrations`.
@@ -177,6 +178,8 @@ The configuration file (`prisma-dm.config.json`) allows customization of the lib
 - **`tempDir`**: Temporary directory for moving migration folders during execution. Default: `prisma/.temp`.
 
 - **`migrationSchemaFileName`**: The filename for prisma schema files within migration directories. Default: `schema.prisma`.
+
+- **`mainPrismaSchema`**: The main Prisma schema file or folder for `npx prisma migrate deploy` command. Default: `prisma/schema.prisma`.
 
 - **`log`**: Logging level (`none`, `info`, `verbose`). Default: `info`.
 

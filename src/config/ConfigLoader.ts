@@ -1,13 +1,12 @@
 import path from "path";
 import fs from "fs-extra";
-import { ConfigSchema } from "./config.type";
 import { CONFIG_FILE_NAME } from "./CONFIG_FILE_NAME";
 import schema from "../../config.schema.json";
 import Ajv from "ajv";
-import { DEFAULT_CONFIG } from "./DEFAULT_CONFIG";
+import { ConfigT, DEFAULT_CONFIG } from "./DEFAULT_CONFIG";
 
 export class ConfigLoader {
-  readonly #config: ConfigSchema;
+  readonly #config: ConfigT;
 
   constructor() {
     const configFilePath = path.join(process.cwd(), CONFIG_FILE_NAME);
@@ -30,7 +29,7 @@ export class ConfigLoader {
       }
     }
 
-    const config: ConfigSchema = {
+    const config: ConfigT = {
       ...DEFAULT_CONFIG,
       ...parsedConfig,
     };

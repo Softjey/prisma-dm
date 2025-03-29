@@ -8,7 +8,10 @@ export abstract class PrismaCLI {
     execSync(`${baseCommand} ${schemaFlag}`, { stdio: "ignore" });
   }
 
-  static migrateDeploy() {
-    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+  static migrateDeploy({ schema }: { schema: string }) {
+    const baseCommand = "npx prisma migrate deploy";
+    const schemaFlag = `--schema=${schema}`;
+
+    execSync(`${baseCommand} ${schemaFlag}`, { stdio: "inherit" });
   }
 }

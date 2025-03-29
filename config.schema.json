@@ -38,23 +38,19 @@
       "description": "The filename for prisma schema files within migration directories. Defaults to schema.prisma",
       "default": "schema.prisma"
     },
+    "mainPrismaSchema": {
+      "type": "string",
+      "pattern": "^(\\/|\\.?\\/|\\.\\.\\/|[^\\/]+).*$",
+      "description": "The main Prisma schema file or folder for `npx prisma migrate deploy` command.",
+      "default": "prisma/schema.prisma"
+    },
     "log": {
       "type": "string",
-      "enum": [
-        "none",
-        "info",
-        "verbose"
-      ],
+      "enum": ["none", "info", "verbose"],
       "description": "Log level for the script, must be one of 'info', 'debug', or 'error'.",
       "default": "info"
     }
   },
-  "required": [
-    "execScriptCommand",
-    "outputDir",
-    "migrationsDir",
-    "tempDir",
-    "log"
-  ],
+  "required": [],
   "additionalProperties": false
 }

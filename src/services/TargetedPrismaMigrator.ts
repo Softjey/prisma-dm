@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { ConfigSchema } from "../config/config.type";
+import { ConfigT } from "../config/DEFAULT_CONFIG";
 import { PrismaCLI } from "../utils/classes/PrismaCLI";
 import { Logger } from "./Logger";
 
@@ -9,7 +9,7 @@ type MigrationDirFile<T extends string> = T | "migration_lock.toml";
 export class TargetedPrismaMigrator<T extends string> {
   constructor(
     private readonly logger: Logger,
-    private readonly config: ConfigSchema,
+    private readonly config: ConfigT,
   ) {}
 
   private createTempDir() {
@@ -77,7 +77,7 @@ export class TargetedPrismaMigrator<T extends string> {
     await this.moveFilesToTempDir(filesToMove);
 
     try {
-      PrismaCLI.migrateDeploy();
+      PrismaCLI.migrateDeploy({ schema: this.config.mainPrismaSchema });
 
       this.logger.logVerbose(
         `All migrations to ${targetMigration} have been applied successfully!`,
