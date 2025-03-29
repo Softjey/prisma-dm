@@ -31,7 +31,7 @@ export interface ConfigSchema {
    */
   migrationSchemaFileName?: string;
   /**
-   * The main Prisma schema file for prisma migrations. Must be a valid file path.
+   * The main Prisma schema file or folder for `npx prisma migrate deploy` command.
    */
   mainPrismaSchema?: string;
   /**

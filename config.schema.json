@@ -41,7 +41,7 @@
     "mainPrismaSchema": {
       "type": "string",
       "pattern": "^(\\/|\\.?\\/|\\.\\.\\/|[^\\/]+).*$",
-      "description": "The main Prisma schema file for prisma migrations. Must be a valid file path.",
+      "description": "The main Prisma schema file or folder for `npx prisma migrate deploy` command.",
       "default": "prisma/schema.prisma"
     },
     "log": {
