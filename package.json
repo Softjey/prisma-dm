@@ -1,6 +1,6 @@
 {
   "name": "prisma-data-migrations",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "main": "dist/src/main.js",
   "types": "dist/src/main.d.ts",
   "files": [
