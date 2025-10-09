@@ -5,12 +5,13 @@ import { ConfigSchema } from "../config/config.type";
 import { DEFAULT_CONFIG } from "../config/DEFAULT_CONFIG";
 import { Validator } from "./Validator";
 import { PrismaCLI } from "../utils/classes/PrismaCLI";
-import { updateOrAddOutputInSchema } from "../utils/updateOrAddOutputInSchema";
+import { createTempSchema } from "../utils/tempMigrationSchema";
 import { TargetedPrismaMigrator } from "./TargetedPrismaMigrator";
 import { ScriptRunner } from "./ScriptRunner";
-import { DB } from "./DB";
+import { DataSourceConfig, DB } from "./DB";
 import { Logger } from "./Logger";
 import { MigrationModel } from "../types/MigrationModel";
+import { withTempDir } from "../utils/tempDir";
 
 export class CLI<T extends string> {
   constructor(
@@ -20,6 +21,7 @@ export class CLI<T extends string> {
     private readonly validator: Validator,
     private readonly logger: Logger,
     private readonly config: ConfigSchema,
+    private readonly dataSource: DataSourceConfig,
   ) {}
 
   private getMigrationPath(migrationName: T) {
@@ -44,11 +46,27 @@ export class CLI<T extends string> {
       if (this.validator.isMigrationWithPrismaSchema(migrationName)) {
         const migrationPath = path.join(migrationsDirPath, migrationName);
         const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
-        const outputPath = `${this.config.outputDir}/${migrationName}`;
+        let outputPath = `${this.config.outputDir}/${migrationName}`;
+
+        // If the path is relative, it is relative to the schema file
+        // inside the migration folder
+        if (!(path.isAbsolute(outputPath))) {
+          outputPath = path.join(path.dirname(schemaPath), outputPath);
+        }
 
         this.logger.logInfo(`Generating types for migration: ${migrationName}`);
-        updateOrAddOutputInSchema(schemaPath, outputPath);
-        PrismaCLI.generate({ schema: schemaPath });
+
+        withTempDir(this.config.tempDir, async () => {
+          const tempSchemaPath = path.join(this.config.tempDir, "schema.prisma");
+          createTempSchema(
+            schemaPath,
+            outputPath,
+            this.dataSource,
+            tempSchemaPath,
+            this.config,
+          )
+          PrismaCLI.generate({ schema: tempSchemaPath });
+        });
       }
     }
   }

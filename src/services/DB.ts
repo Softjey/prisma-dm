@@ -1,30 +1,71 @@
 import { MigrationModel } from "../types/MigrationModel";
-import { createPool, DatabasePool, sql } from "slonik";
+
+import knex from "knex";
+import { Knex } from "knex";
+import { ConfigSchema } from "../config/config.type";
+import { prismaSqliteURLToFilePath } from "../utils/readDataSourceConfig";
+
+export interface DataSourceConfig {
+    provider: string;
+    url: string;
+}
+
+
+function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): Knex.Config {
+  switch (dataSource.provider) {
+    case "postgresql":
+      return {
+        client: "pg",
+        connection: dataSource.url,
+        pool: { min: 0, max: 10 },  // Recommended by the docs to lower min to 0
+      };
+    case "sqlite":
+      const sqliteFilePath = prismaSqliteURLToFilePath(dataSource.url, config);
+      return {
+        client: "sqlite3",
+        connection: {
+          filename: sqliteFilePath,
+        },
+        useNullAsDefault: true,
+      };
+    default:
+      throw new Error(`Unsupported datasource provider: ${dataSource.provider}`);
+  }
+}
 
 export class DB {
-  private pool: DatabasePool;
+  private readonly knexConfig: Knex.Config;
+  private knex?: Knex;
+
+  constructor(
+    private readonly config: ConfigSchema,
+    private readonly dataSource: DataSourceConfig,
+  ) {
+    this.knexConfig = createKnexConfig(dataSource, config);
+  }
 
   async connect() {
-    this.pool = await createPool(process.env.DATABASE_URL);
+    this.knex = knex(this.knexConfig);
   }
 
   async disconnect() {
-    await this.pool.end();
+    await this.knex.destroy();
   }
 
   async isPrismaMigrationsTableExists(): Promise<boolean> {
-    const query = await this.pool.query(
-      sql.unsafe`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '_prisma_migrations')`
-    );
+    if (!this.knex) {
+      throw new Error("Database connection is not established. Call connect() first.");
+    }
 
-    return query.rows[0].exists;
+    return await this.knex.schema.hasTable("_prisma_migrations");
   }
 
   async getMigrationByName(name: string): Promise<MigrationModel | null> {
-    const query = await this.pool.query(
-      sql.unsafe`SELECT * FROM "_prisma_migrations" WHERE migration_name = ${name}`
-    );
+    if (!this.knex) {
+      throw new Error("Database connection is not established. Call connect() first.");
+    }
 
-    return query.rows[0] ?? null;
+    const migration = this.knex<MigrationModel>("_prisma_migrations").where({ migration_name: name }).first();
+    return migration ?? null;
   }
 }

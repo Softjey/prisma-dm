@@ -3,6 +3,7 @@ import fs from "fs-extra";
 import { ConfigT } from "../config/DEFAULT_CONFIG";
 import { PrismaCLI } from "../utils/classes/PrismaCLI";
 import { Logger } from "./Logger";
+import { withTempDir } from "../utils/tempDir";
 
 type MigrationDirFile<T extends string> = T | "migration_lock.toml";
 
@@ -11,18 +12,6 @@ export class TargetedPrismaMigrator<T extends string> {
     private readonly logger: Logger,
     private readonly config: ConfigT,
   ) {}
-
-  private createTempDir() {
-    return fs.mkdir(this.config.tempDir, { recursive: true }).catch((e) => {
-      throw new Error(`Error creating temp dir: ${e.message}`);
-    });
-  }
-
-  private removeTempDir() {
-    return fs.rmdir(this.config.tempDir).catch((e) => {
-      throw new Error(`Error removing temp dir: ${e.message}`);
-    });
-  }
 
   private async getMigrationFiles() {
     const files = await fs.readdir(this.config.migrationsDir).catch((e) => {
@@ -70,24 +59,20 @@ export class TargetedPrismaMigrator<T extends string> {
 
     const filesToMove = migrationFiles.slice(indexOfTargetMigration + 1, -1) as T[];
 
-    this.logger.logVerbose("Creating temp dir...");
-    await this.createTempDir();
+    withTempDir(this.config.tempDir, async () => {
+      this.logger.logVerbose("Moving migrations files to temp dir...");
+      await this.moveFilesToTempDir(filesToMove);
 
-    this.logger.logVerbose("Moving migrations files to temp dir...");
-    await this.moveFilesToTempDir(filesToMove);
+      try {
+        PrismaCLI.migrateDeploy({ schema: this.config.mainPrismaSchema });
 
-    try {
-      PrismaCLI.migrateDeploy({ schema: this.config.mainPrismaSchema });
-
-      this.logger.logVerbose(
-        `All migrations to ${targetMigration} have been applied successfully!`,
-      );
-    } finally {
-      this.logger.logVerbose("Moving migrations files back to migrations dir...");
-      await this.moveFilesBackToMigrationsDir(filesToMove);
-
-      this.logger.logVerbose("Removing temp dir...");
-      await this.removeTempDir();
-    }
+        this.logger.logVerbose(
+          `All migrations to ${targetMigration} have been applied successfully!`,
+        );
+      } finally {
+        this.logger.logVerbose("Moving migrations files back to migrations dir...");
+        await this.moveFilesBackToMigrationsDir(filesToMove);
+      }
+    });
   }
 }
