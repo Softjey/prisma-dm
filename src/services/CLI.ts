@@ -5,12 +5,13 @@ import { ConfigSchema } from "../config/config.type";
 import { DEFAULT_CONFIG } from "../config/DEFAULT_CONFIG";
 import { Validator } from "./Validator";
 import { PrismaCLI } from "../utils/classes/PrismaCLI";
-import { updateOrAddOutputInSchema } from "../utils/updateOrAddOutputInSchema";
+import { createTempSchema } from "../utils/tempMigrationSchema";
 import { TargetedPrismaMigrator } from "./TargetedPrismaMigrator";
 import { ScriptRunner } from "./ScriptRunner";
-import { DB } from "./DB";
+import { DataSourceConfig, DB } from "./DB";
 import { Logger } from "./Logger";
 import { MigrationModel } from "../types/MigrationModel";
+import { withTempDir } from "../utils/tempDir";
 
 export class CLI<T extends string> {
   constructor(
@@ -20,6 +21,7 @@ export class CLI<T extends string> {
     private readonly validator: Validator,
     private readonly logger: Logger,
     private readonly config: ConfigSchema,
+    private readonly dataSource: DataSourceConfig,
   ) {}
 
   private getMigrationPath(migrationName: T) {
@@ -36,21 +38,41 @@ export class CLI<T extends string> {
     fs.writeFileSync(configFilePath, JSON.stringify(DEFAULT_CONFIG, null, 2));
   }
 
-  generate() {
+  async generate() {
     const migrationsDirPath = path.join(process.cwd(), this.config.migrationsDir);
     const migrationsDir = fs.readdirSync(migrationsDirPath);
+    const migrationsWithSchemas = migrationsDir.filter((m) =>
+      this.validator.isMigrationWithPrismaSchema(m),
+    );
 
-    for (const migrationName of migrationsDir) {
-      if (this.validator.isMigrationWithPrismaSchema(migrationName)) {
+    await withTempDir(this.config.tempDir, async () => {
+      const promises = migrationsWithSchemas.map(async (migrationName) => {
         const migrationPath = path.join(migrationsDirPath, migrationName);
         const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
-        const outputPath = `${this.config.outputDir}/${migrationName}`;
+        let outputPath = `${this.config.outputDir}/${migrationName}`;
 
-        this.logger.logInfo(`Generating types for migration: ${migrationName}`);
-        updateOrAddOutputInSchema(schemaPath, outputPath);
-        PrismaCLI.generate({ schema: schemaPath });
-      }
-    }
+        // If the path is relative, it is relative to the schema file inside the migration folder
+        if (!path.isAbsolute(outputPath)) {
+          outputPath = path.join(path.dirname(schemaPath), outputPath);
+        }
+
+        const tempSchemaPath = path.join(this.config.tempDir, migrationName, "schema.prisma");
+        await createTempSchema(
+          schemaPath,
+          outputPath,
+          this.dataSource,
+          tempSchemaPath,
+          this.config,
+        );
+        PrismaCLI.generate({ schema: tempSchemaPath });
+
+        this.logger.logInfo(`Types generated for migration: ${migrationName}`);
+      });
+
+      await Promise.all(promises);
+    });
+
+    this.logger.logInfo("Types generation completed");
   }
 
   private getPrismaFilesFromDir(dirPath: string): string[] {
