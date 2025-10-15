@@ -21,11 +21,11 @@ function createCLI() {
   const dataSource = readDataSourceConfig(config.mainPrismaSchema);
 
   const logger = new Logger(config);
-  const prisma = new DB(config, dataSource);
+  const db = new DB(config, dataSource);
   const validator = new Validator(config);
   const scriptRunner = new ScriptRunner(config);
   const migrator = new TargetedPrismaMigrator(logger, config);
-  const cli = new CLI(migrator, scriptRunner, prisma, validator, logger, config, dataSource);
+  const cli = new CLI(migrator, scriptRunner, db, validator, logger, config, dataSource);
 
   return cli;
 }
@@ -57,8 +57,8 @@ program
 program
   .command("generate")
   .description("Generate types for data migrations by prisma schemas")
-  .action(() => {
-    createCLI().generate();
+  .action(async () => {
+    await createCLI().generate();
   });
 
 program
