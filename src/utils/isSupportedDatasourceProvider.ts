@@ -1,4 +1,4 @@
-export const SUPPORTED_DATASOURCE_PROVIDERS = ["postgresql", "sqlite"] as const;
+export const SUPPORTED_DATASOURCE_PROVIDERS = ["postgresql", "sqlite", 'mysql', 'sqlserver'] as const;
 export type SupportedDatasourceProvider = (typeof SUPPORTED_DATASOURCE_PROVIDERS)[number];
 
 export default function isSupportedDatasourceProvider(

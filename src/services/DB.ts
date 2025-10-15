@@ -17,7 +17,6 @@ function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): K
       return {
         client: "pg",
         connection: dataSource.url,
-        pool: { min: 0, max: 10 }, // Recommended by the docs to lower min to 0
       };
     case "sqlite":
       const sqliteFilePath = prismaSqliteURLToFilePath(dataSource.url, config);
@@ -28,6 +27,18 @@ function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): K
         },
         useNullAsDefault: true,
       };
+    case "sqlserver":
+      return {
+        client: "mssql",
+        connection: dataSource.url,
+      };
+    case "mysql":
+      return {
+        client: "mysql",
+        connection: dataSource.url,
+      };
+    default:
+      throw new Error(`Unsupported datasource provider: ${dataSource.provider}`);
   }
 }
 
