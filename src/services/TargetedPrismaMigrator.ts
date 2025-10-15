@@ -59,7 +59,7 @@ export class TargetedPrismaMigrator<T extends string> {
 
     const filesToMove = migrationFiles.slice(indexOfTargetMigration + 1, -1) as T[];
 
-    withTempDir(this.config.tempDir, async () => {
+    await withTempDir(this.config.tempDir, async () => {
       this.logger.logVerbose("Moving migrations files to temp dir...");
       await this.moveFilesToTempDir(filesToMove);
 
