@@ -3,13 +3,13 @@ import { MigrationModel } from "../types/MigrationModel";
 import knex from "knex";
 import { Knex } from "knex";
 import { ConfigSchema } from "../config/config.type";
-import { prismaSqliteURLToFilePath } from "../utils/readDataSourceConfig";
+import { prismaSqliteURLToFilePath } from "../utils/prismaSqliteURLToFilePath";
+import { SupportedDatasourceProvider } from "../utils/isSupportedDatasourceProvider";
 
 export interface DataSourceConfig {
-    provider: string;
-    url: string;
+  provider: SupportedDatasourceProvider;
+  url: string;
 }
-
 
 function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): Knex.Config {
   switch (dataSource.provider) {
@@ -17,7 +17,7 @@ function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): K
       return {
         client: "pg",
         connection: dataSource.url,
-        pool: { min: 0, max: 10 },  // Recommended by the docs to lower min to 0
+        pool: { min: 0, max: 10 }, // Recommended by the docs to lower min to 0
       };
     case "sqlite":
       const sqliteFilePath = prismaSqliteURLToFilePath(dataSource.url, config);
@@ -28,8 +28,6 @@ function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): K
         },
         useNullAsDefault: true,
       };
-    default:
-      throw new Error(`Unsupported datasource provider: ${dataSource.provider}`);
   }
 }
 
@@ -37,10 +35,7 @@ export class DB {
   private readonly knexConfig: Knex.Config;
   private knex?: Knex;
 
-  constructor(
-    private readonly config: ConfigSchema,
-    private readonly dataSource: DataSourceConfig,
-  ) {
+  constructor(config: ConfigSchema, dataSource: DataSourceConfig) {
     this.knexConfig = createKnexConfig(dataSource, config);
   }
 
@@ -65,7 +60,9 @@ export class DB {
       throw new Error("Database connection is not established. Call connect() first.");
     }
 
-    const migration = this.knex<MigrationModel>("_prisma_migrations").where({ migration_name: name }).first();
+    const migration = this.knex<MigrationModel>("_prisma_migrations")
+      .where({ migration_name: name })
+      .first();
     return migration ?? null;
   }
 }
