@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "fs/promises";
 
 import {
   parsePrismaSchema,
@@ -6,10 +6,13 @@ import {
   SchemaDeclaration,
   Config,
   formatAst,
+  CommentBlock,
+  ConfigBlockMember,
 } from "@loancrate/prisma-schema-parser";
 import { DataSourceConfig } from "../services/DB";
 import { prismaSqliteURLToFilePath } from "./prismaSqliteURLToFilePath";
 import { ConfigSchema } from "../config/config.type";
+import path from "path";
 
 function isNonClientGenerator(decl: SchemaDeclaration): boolean {
   return (
@@ -44,11 +47,19 @@ function updateGenerator(ast: PrismaSchema, clientOutputPath: string): PrismaSch
   let generatorOutputAttribute = generator.members.find(
     (attr) => attr.kind === "config" && attr.name?.value === "output",
   ) as Config | undefined;
+
   if (!generatorOutputAttribute) {
-    throw new Error("The generator block is missing an output attribute.");
+    const newOutputAttribute: Config = {
+      kind: "config",
+      name: { kind: "name", value: "output" },
+      value: { kind: "literal", value: clientOutputPath },
+    };
+
+    generator.members.push(newOutputAttribute as unknown as CommentBlock);
+  } else {
+    generatorOutputAttribute.value = { kind: "literal", value: clientOutputPath };
   }
 
-  generatorOutputAttribute.value = { kind: "literal", value: clientOutputPath };
   return astCopy;
 }
 
@@ -95,19 +106,20 @@ function updateDatasource(
  * Creates a temporary Prisma schema file for generating the client for a migration.
  * The schema is based on the source schema file, but with updated generator and datasource blocks.
  */
-export function createTempSchema(
+export async function createTempSchema(
   srcPrismaSchemaPath: string,
   clientOutputPath: string,
   dataSource: DataSourceConfig,
   outPrismaSchemaPath: string,
   config: ConfigSchema,
 ) {
-  const schemaContent = fs.readFileSync(srcPrismaSchemaPath, "utf-8");
+  const schemaContent = await fs.readFile(srcPrismaSchemaPath, "utf-8");
 
   let schemaAst = parsePrismaSchema(schemaContent);
   schemaAst = updateGenerator(schemaAst, clientOutputPath);
   schemaAst = updateDatasource(schemaAst, dataSource, config);
 
   const formattedSchema = formatAst(schemaAst);
-  fs.writeFileSync(outPrismaSchemaPath, formattedSchema, "utf-8");
+  await fs.mkdir(path.dirname(outPrismaSchemaPath), { recursive: true });
+  await fs.writeFile(outPrismaSchemaPath, formattedSchema, "utf-8");
 }
