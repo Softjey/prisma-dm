@@ -71,9 +71,10 @@ export class DB {
       throw new Error("Database connection is not established. Call connect() first.");
     }
 
-    const migration = this.knex<MigrationModel>("_prisma_migrations")
+    const migration = await this.knex<MigrationModel>("_prisma_migrations")
       .where({ migration_name: name })
       .first();
+
     return migration ?? null;
   }
 }
