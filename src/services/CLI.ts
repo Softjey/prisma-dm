@@ -38,37 +38,35 @@ export class CLI<T extends string> {
     fs.writeFileSync(configFilePath, JSON.stringify(DEFAULT_CONFIG, null, 2));
   }
 
-  generate() {
+  async generate() {
     const migrationsDirPath = path.join(process.cwd(), this.config.migrationsDir);
     const migrationsDir = fs.readdirSync(migrationsDirPath);
+    const migrationsWithSchemas = migrationsDir.filter((m) =>
+      this.validator.isMigrationWithPrismaSchema(m),
+    );
 
-    for (const migrationName of migrationsDir) {
-      if (this.validator.isMigrationWithPrismaSchema(migrationName)) {
+    await withTempDir(this.config.tempDir, async () => {
+      const promises = migrationsWithSchemas.map(async (migrationName) => {
         const migrationPath = path.join(migrationsDirPath, migrationName);
         const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
         let outputPath = `${this.config.outputDir}/${migrationName}`;
 
-        // If the path is relative, it is relative to the schema file
-        // inside the migration folder
-        if (!(path.isAbsolute(outputPath))) {
+        // If the path is relative, it is relative to the schema file inside the migration folder
+        if (!path.isAbsolute(outputPath)) {
           outputPath = path.join(path.dirname(schemaPath), outputPath);
         }
 
         this.logger.logInfo(`Generating types for migration: ${migrationName}`);
 
-        withTempDir(this.config.tempDir, async () => {
-          const tempSchemaPath = path.join(this.config.tempDir, "schema.prisma");
-          createTempSchema(
-            schemaPath,
-            outputPath,
-            this.dataSource,
-            tempSchemaPath,
-            this.config,
-          )
-          PrismaCLI.generate({ schema: tempSchemaPath });
-        });
-      }
-    }
+        const tempSchemaPath = path.join(this.config.tempDir, migrationName, "schema.prisma");
+        createTempSchema(schemaPath, outputPath, this.dataSource, tempSchemaPath, this.config);
+        PrismaCLI.generate({ schema: tempSchemaPath });
+      });
+
+      await Promise.all(promises);
+    });
+
+    this.logger.logInfo("Types generation completed");
   }
 
   private getPrismaFilesFromDir(dirPath: string): string[] {
