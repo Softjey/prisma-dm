@@ -32,6 +32,10 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
     const envName = readStringArgument(arg.args[0]);
     const envValue = process.env[envName];
 
+    if (!envValue) {
+      throw new Error(`Environment variable ${envName} is not set.`);
+    }
+
     return envValue;
   }
 
