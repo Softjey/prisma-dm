@@ -56,11 +56,17 @@ export class CLI<T extends string> {
           outputPath = path.join(path.dirname(schemaPath), outputPath);
         }
 
-        this.logger.logInfo(`Generating types for migration: ${migrationName}`);
-
         const tempSchemaPath = path.join(this.config.tempDir, migrationName, "schema.prisma");
-        createTempSchema(schemaPath, outputPath, this.dataSource, tempSchemaPath, this.config);
+        await createTempSchema(
+          schemaPath,
+          outputPath,
+          this.dataSource,
+          tempSchemaPath,
+          this.config,
+        );
         PrismaCLI.generate({ schema: tempSchemaPath });
+
+        this.logger.logInfo(`Types generated for migration: ${migrationName}`);
       });
 
       await Promise.all(promises);
