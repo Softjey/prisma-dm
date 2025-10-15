@@ -6,7 +6,9 @@ import {
   SchemaArgument,
 } from "@loancrate/prisma-schema-parser";
 import { DataSourceConfig } from "../services/DB";
-import isSupportedDatasourceProvider from "./isSupportedDatasourceProvider";
+import isSupportedDatasourceProvider, {
+  SUPPORTED_DATASOURCE_PROVIDERS,
+} from "./isSupportedDatasourceProvider";
 
 /**
  * Reads a schema argument and resolves any env() function calls.
@@ -77,7 +79,9 @@ export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
   const url = readArgumentWithEnv(urlDeclaration.value);
 
   if (!isSupportedDatasourceProvider(provider)) {
-    throw new Error(`Unsupported datasource provider: ${provider}`);
+    throw new Error(
+      `Unsupported datasource provider: ${provider}. Supported providers are: ${SUPPORTED_DATASOURCE_PROVIDERS.join(", ")}`,
+    );
   }
 
   return { provider, url };
