@@ -22,7 +22,7 @@ function isNonClientGenerator(decl: SchemaDeclaration): boolean {
         member.kind === "config" &&
         member.name?.value === "provider" &&
         member.value?.kind === "literal" &&
-        member.value?.value === "prisma-client-js",
+        (member.value?.value === "prisma-client-js" || member.value?.value === "prisma-client"),
     )
   );
 }
@@ -36,7 +36,7 @@ function updateGenerator(ast: PrismaSchema, clientOutputPath: string): PrismaSch
   astCopy.declarations = astCopy.declarations.filter((decl) => !isNonClientGenerator(decl));
   const generators = astCopy.declarations.filter((decl) => decl.kind === "generator");
   if (generators.length !== 1) {
-    throw new Error("The schema must contain exactly one generator block for prisma-client-js.");
+    throw new Error("The schema must contain exactly one generator block for prisma-client-js or prisma-client.");
   }
   let generator = generators[0];
 
@@ -74,32 +74,12 @@ function updateDatasource(
   dataSource: DataSourceConfig,
   config: ConfigSchema,
 ): PrismaSchema {
-  let astCopy = structuredClone(ast);
-  const dataSources = astCopy.declarations.filter((decl) => decl.kind === "datasource");
-  if (dataSources.length !== 1) {
-    throw new Error("The schema must contain exactly one datasource");
-  }
-  let dataSourceDecl = dataSources[0];
-  if (!("members" in dataSourceDecl)) {
-    throw new Error("The datasource block must have a members array.");
-  }
-
-  let dataSourceUrlAttribute = dataSourceDecl.members.find(
-    (attr) => attr.kind === "config" && attr.name?.value === "url",
-  ) as Config | undefined;
-
-  if (!dataSourceUrlAttribute) {
-    throw new Error("The datasource block is missing a url attribute.");
-  }
-
-  let url = dataSource.url;
   if (dataSource.provider === "sqlite") {
     // This ensures that the SQLite file path is absolute
-    url = `file:${prismaSqliteURLToFilePath(dataSource.url, config)}`;
+    dataSource.url = `file:${prismaSqliteURLToFilePath(dataSource.url, config)}`;
   }
 
-  dataSourceUrlAttribute.value = { kind: "literal", value: url };
-  return astCopy;
+  return ast;
 }
 
 /**

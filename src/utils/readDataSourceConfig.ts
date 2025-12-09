@@ -18,7 +18,7 @@ import isSupportedDatasourceProvider, {
 function readArgumentWithEnv(arg: SchemaArgument): string {
   if (arg.kind === "literal") {
     if (typeof arg.value !== "string") {
-      throw new Error("Expected a string literal for provider or url.");
+      throw new Error("Expected a string literal for provider");
     }
 
     return arg.value;
@@ -40,12 +40,12 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
   }
 
   throw new Error(
-    "Only string literals and env() function calls are supported for provider and url.",
+    "Only string literals and env() function calls are supported for provider.",
   );
 }
 
 /**
- * Reads the datasource configuration (provider and url) from a Prisma schema file.
+ * Reads the datasource configuration (provider) from a Prisma schema file.
  * @param schemaPath
  * @returns
  */
@@ -58,29 +58,21 @@ export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
   const providerDeclaration =
     "members" in datasourceDeclaration
       ? datasourceDeclaration.members.find(
-          (member) => "name" in member && member.name.value === "provider",
-        )
+        (member) => "name" in member && member.name.value === "provider",
+      )
       : null;
 
-  const urlDeclaration =
-    "members" in datasourceDeclaration
-      ? datasourceDeclaration.members.find(
-          (member) => "name" in member && member.name.value === "url",
-        )
-      : null;
-
-  if (!providerDeclaration || !urlDeclaration) {
+  if (!providerDeclaration) {
     throw new Error(
-      "Datasource declaration must include both 'provider' and 'url' configurations.",
+      "Datasource declaration must include a 'provider' configuration.",
     );
   }
 
-  if (!("value" in providerDeclaration) || !("value" in urlDeclaration)) {
-    throw new Error("'provider' and 'url' must be config declarations with values.");
+  if (!("value" in providerDeclaration)) {
+    throw new Error("'provider' must be configured with a value.");
   }
 
   const provider = readArgumentWithEnv(providerDeclaration.value);
-  const url = readArgumentWithEnv(urlDeclaration.value);
 
   if (!isSupportedDatasourceProvider(provider)) {
     throw new Error(
@@ -88,5 +80,11 @@ export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
     );
   }
 
-  return { provider, url };
+  const URL = process.env.DATABASE_URL;
+
+  if (URL === undefined) {
+    throw new Error('DATABASE_URL should be set.');
+  }
+
+  return { provider, url: URL };
 }
