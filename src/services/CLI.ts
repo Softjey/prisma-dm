@@ -8,7 +8,7 @@ import { PrismaCLI } from "../utils/classes/PrismaCLI";
 import { createTempSchema } from "../utils/tempMigrationSchema";
 import { TargetedPrismaMigrator } from "./TargetedPrismaMigrator";
 import { ScriptRunner } from "./ScriptRunner";
-import { DataSourceConfig, DB } from "./DB";
+import { DB } from "./DB";
 import { Logger } from "./Logger";
 import { MigrationModel } from "../types/MigrationModel";
 import { withTempDir } from "../utils/tempDir";
@@ -20,9 +20,8 @@ export class CLI<T extends string> {
     private readonly db: DB,
     private readonly validator: Validator,
     private readonly logger: Logger,
-    private readonly config: ConfigSchema,
-    private readonly dataSource: DataSourceConfig,
-  ) {}
+    private readonly config: ConfigSchema
+  ) { }
 
   private getMigrationPath(migrationName: T) {
     return path.resolve(this.config.migrationsDir, migrationName);
@@ -60,9 +59,7 @@ export class CLI<T extends string> {
         await createTempSchema(
           schemaPath,
           outputPath,
-          this.dataSource,
           tempSchemaPath,
-          this.config,
         );
         PrismaCLI.generate({ schema: tempSchemaPath });
 

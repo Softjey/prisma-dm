@@ -16,16 +16,16 @@ dotenv.config();
 
 const program = new Command();
 
-function createCLI() {
+async function createCLI() {
   const { config } = new ConfigLoader();
-  const dataSource = readDataSourceConfig(config.mainPrismaSchema);
+  const dataSource = await readDataSourceConfig(config.mainPrismaSchema);
 
   const logger = new Logger(config);
   const db = new DB(config, dataSource);
   const validator = new Validator(config);
   const scriptRunner = new ScriptRunner(config);
   const migrator = new TargetedPrismaMigrator(logger, config);
-  const cli = new CLI(migrator, scriptRunner, db, validator, logger, config, dataSource);
+  const cli = new CLI(migrator, scriptRunner, db, validator, logger, config);
 
   return cli;
 }
@@ -47,18 +47,18 @@ program
   .description("Merge prisma schema folder to single schema file")
   .option("--schema <value>", "Path to schema folder", "prisma/schema")
   .option("--output <value>", "Path to output schema file", "prisma/schema.prisma")
-  .action((options) => {
+  .action(async (options) => {
     const output = options.output as string;
     const schema = options.schema as string;
 
-    createCLI().mergeSchema(schema ?? "prisma/schema", output ?? "prisma/schema.prisma");
+    (await createCLI()).mergeSchema(schema ?? "prisma/schema", output ?? "prisma/schema.prisma");
   });
 
 program
   .command("generate")
   .description("Generate types for data migrations by prisma schemas")
   .action(async () => {
-    await createCLI().generate();
+    (await createCLI()).generate();
   });
 
 program
@@ -73,7 +73,7 @@ program
     const toOption: string | undefined = options.to ?? options.upto;
     const targetMigration = toOption === "latest" ? undefined : toOption;
 
-    await createCLI().migrate({
+    (await createCLI()).migrate({
       targetMigration,
       includeTargetMigration: !options.to,
     });
@@ -85,14 +85,14 @@ program
     "Run a specific data migration post script manually (particularly useful when a post script fails during migration, allowing you to reapply it after fixing the issue)",
   )
   .option("-m, --migration <value>", "Name of the migration")
-  .action((options) => {
+  .action(async (options) => {
     if (!options.migration) {
       throw new Error('Option "--migration" is required to specify the migration name');
     }
 
     const migrationName = options.migration;
 
-    createCLI().runPostScript(migrationName);
+    (await createCLI()).runPostScript(migrationName);
   });
 
 program.on("command:*", () => {
