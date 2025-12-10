@@ -9,6 +9,7 @@ import { DataSourceConfig } from "../services/DB";
 import isSupportedDatasourceProvider, {
   SUPPORTED_DATASOURCE_PROVIDERS,
 } from "./isSupportedDatasourceProvider";
+import { readDatabaseUrlFromPrismaConfig } from "./readPrismaConfig";
 
 /**
  * Reads a schema argument and resolves any env() function calls.
@@ -45,11 +46,11 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
 }
 
 /**
- * Reads the datasource configuration (provider) from a Prisma schema file.
+ * Reads the datasource configuration (provider) from a Prisma schema file and the datasource URL from prisma.config.ts
  * @param schemaPath
  * @returns
  */
-export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
+export async function readDataSourceConfig(schemaPath: string): Promise<DataSourceConfig> {
   const schemaContent = readFileSync(schemaPath, "utf-8");
   const schemaAst = parsePrismaSchema(schemaContent);
 
@@ -80,11 +81,8 @@ export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
     );
   }
 
-  const URL = process.env.DATABASE_URL;
-
-  if (URL === undefined) {
-    throw new Error('DATABASE_URL should be set.');
-  }
+  // Try to read DATABASE_URL from prisma.config.ts (Prisma 7), fall back to process.env
+  const URL = await readDatabaseUrlFromPrismaConfig();
 
   return { provider, url: URL };
 }

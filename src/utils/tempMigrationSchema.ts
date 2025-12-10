@@ -64,40 +64,18 @@ function updateGenerator(ast: PrismaSchema, clientOutputPath: string): PrismaSch
 }
 
 /**
- * Updates the datasource block so that in case of SQLite,
- * the file path in the URL is absolute (not relative).
- * This is needed because the schema copied to the migrations
- * folder would have a different relative path.
- */
-function updateDatasource(
-  ast: PrismaSchema,
-  dataSource: DataSourceConfig,
-  config: ConfigSchema,
-): PrismaSchema {
-  if (dataSource.provider === "sqlite") {
-    // This ensures that the SQLite file path is absolute
-    dataSource.url = `file:${prismaSqliteURLToFilePath(dataSource.url, config)}`;
-  }
-
-  return ast;
-}
-
-/**
  * Creates a temporary Prisma schema file for generating the client for a migration.
  * The schema is based on the source schema file, but with updated generator and datasource blocks.
  */
 export async function createTempSchema(
   srcPrismaSchemaPath: string,
   clientOutputPath: string,
-  dataSource: DataSourceConfig,
-  outPrismaSchemaPath: string,
-  config: ConfigSchema,
+  outPrismaSchemaPath: string
 ) {
   const schemaContent = await fs.readFile(srcPrismaSchemaPath, "utf-8");
 
   let schemaAst = parsePrismaSchema(schemaContent);
   schemaAst = updateGenerator(schemaAst, clientOutputPath);
-  schemaAst = updateDatasource(schemaAst, dataSource, config);
 
   const formattedSchema = formatAst(schemaAst);
   await fs.mkdir(path.dirname(outPrismaSchemaPath), { recursive: true });
