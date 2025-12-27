@@ -64,60 +64,18 @@ function updateGenerator(ast: PrismaSchema, clientOutputPath: string): PrismaSch
 }
 
 /**
- * Updates the datasource block so that in case of SQLite,
- * the file path in the URL is absolute (not relative).
- * This is needed because the schema copied to the migrations
- * folder would have a different relative path.
- */
-function updateDatasource(
-  ast: PrismaSchema,
-  dataSource: DataSourceConfig,
-  config: ConfigSchema,
-): PrismaSchema {
-  let astCopy = structuredClone(ast);
-  const dataSources = astCopy.declarations.filter((decl) => decl.kind === "datasource");
-  if (dataSources.length !== 1) {
-    throw new Error("The schema must contain exactly one datasource");
-  }
-  let dataSourceDecl = dataSources[0];
-  if (!("members" in dataSourceDecl)) {
-    throw new Error("The datasource block must have a members array.");
-  }
-
-  let dataSourceUrlAttribute = dataSourceDecl.members.find(
-    (attr) => attr.kind === "config" && attr.name?.value === "url",
-  ) as Config | undefined;
-
-  if (!dataSourceUrlAttribute) {
-    throw new Error("The datasource block is missing a url attribute.");
-  }
-
-  let url = dataSource.url;
-  if (dataSource.provider === "sqlite") {
-    // This ensures that the SQLite file path is absolute
-    url = `file:${prismaSqliteURLToFilePath(dataSource.url, config)}`;
-  }
-
-  dataSourceUrlAttribute.value = { kind: "literal", value: url };
-  return astCopy;
-}
-
-/**
  * Creates a temporary Prisma schema file for generating the client for a migration.
  * The schema is based on the source schema file, but with updated generator and datasource blocks.
  */
 export async function createTempSchema(
   srcPrismaSchemaPath: string,
-  clientOutputPath: string,
-  dataSource: DataSourceConfig,
+  clientOutputPath: string, 
   outPrismaSchemaPath: string,
-  config: ConfigSchema,
 ) {
   const schemaContent = await fs.readFile(srcPrismaSchemaPath, "utf-8");
 
   let schemaAst = parsePrismaSchema(schemaContent);
   schemaAst = updateGenerator(schemaAst, clientOutputPath);
-  schemaAst = updateDatasource(schemaAst, dataSource, config);
 
   const formattedSchema = formatAst(schemaAst);
   await fs.mkdir(path.dirname(outPrismaSchemaPath), { recursive: true });
