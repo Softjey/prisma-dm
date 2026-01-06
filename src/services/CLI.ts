@@ -54,13 +54,9 @@ export class CLI<T extends string> {
         outputPath = path.join(path.dirname(schemaPath), outputPath);
       }
 
-      const tempSchemaFilename = `.tmp-migration-schema_${migrationName}.prisma`;
+      const tempSchemaFilename = `.tmp-migration-schema-${Math.random().toString(36).slice(2, 4)}_${migrationName}.prisma`;
       const tempSchemaPath = path.join(migrationsDirPath, tempSchemaFilename);
-      await createTempSchema(
-        schemaPath,
-        outputPath,
-        tempSchemaPath,
-      );
+      await createTempSchema(schemaPath, outputPath, tempSchemaPath);
       try {
         PrismaCLI.generate({ schema: tempSchemaPath });
       } finally {
