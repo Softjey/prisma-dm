@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import { ConfigSchema } from "../config/config.type";
  
 /**
@@ -16,7 +17,20 @@ export function prismaSqliteURLToFilePath(url: string, config: ConfigSchema): st
   if (path.isAbsolute(prismaPath)) {
     return prismaPath;
   } else {
-    const schemaDirPath = path.dirname(config.mainPrismaSchema);
+    let schemaDirPath: string;
+    try {
+      const stats = fs.statSync(config.mainPrismaSchema);
+      if (stats.isDirectory()) {
+         schemaDirPath = config.mainPrismaSchema;
+      } else {
+         schemaDirPath = path.dirname(config.mainPrismaSchema);
+      }
+    } catch {
+       // If file doesn't exist (e.g. CI/CD?), fallback to dirname. 
+       // But verifying existence is better.
+       schemaDirPath = path.dirname(config.mainPrismaSchema);
+    }
+
     const absolutePath = path.resolve(schemaDirPath, prismaPath);
     return absolutePath;
   }
