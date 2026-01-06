@@ -1,4 +1,5 @@
-import { readFileSync } from "fs";
+import { readFileSync, statSync, readdirSync } from "fs";
+import { join } from "path";
 
 import {
   parsePrismaSchema,
@@ -50,7 +51,16 @@ function readArgumentWithEnv(arg: SchemaArgument): string {
  * @returns
  */
 export function readDataSourceConfig(schemaPath: string): DataSourceConfig {
-  const schemaContent = readFileSync(schemaPath, "utf-8");
+  let schemaContent: string;
+  const stats = statSync(schemaPath);
+
+  if (stats.isDirectory()) {
+    const files = readdirSync(schemaPath).filter((file) => file.endsWith(".prisma"));
+    schemaContent = files.map((file) => readFileSync(join(schemaPath, file), "utf-8")).join("\n");
+  } else {
+    schemaContent = readFileSync(schemaPath, "utf-8");
+  }
+
   const schemaAst = parsePrismaSchema(schemaContent);
 
   const datasourceDeclaration = schemaAst.declarations.find((decl) => decl.kind === "datasource");

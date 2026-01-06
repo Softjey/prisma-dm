@@ -35,6 +35,14 @@ export class TargetedPrismaMigrator<T extends string> {
     }
   }
 
+  private async tempDirIsEmpty() {
+    const files = await fs.readdir(this.config.tempDir).catch((e) => {
+      throw new Error(`Error reading temp dir: ${e.message}`);
+    });
+
+    return files.length === 0;
+  }
+
   private async moveFilesBackToMigrationsDir(files: T[]) {
     for (const file of files) {
       const src = path.resolve(this.config.tempDir, file);
@@ -59,20 +67,24 @@ export class TargetedPrismaMigrator<T extends string> {
 
     const filesToMove = migrationFiles.slice(indexOfTargetMigration + 1, -1) as T[];
 
-    await withTempDir(this.config.tempDir, async () => {
-      this.logger.logVerbose("Moving migrations files to temp dir...");
-      await this.moveFilesToTempDir(filesToMove);
+    await withTempDir(
+      this.config.tempDir,
+      async () => {
+        this.logger.logVerbose("Moving migrations files to temp dir...");
+        await this.moveFilesToTempDir(filesToMove);
 
-      try {
-        PrismaCLI.migrateDeploy({ schema: this.config.mainPrismaSchema });
+        try {
+          PrismaCLI.migrateDeploy({ schema: this.config.mainPrismaSchema });
 
-        this.logger.logVerbose(
-          `All migrations to ${targetMigration} have been applied successfully!`,
-        );
-      } finally {
-        this.logger.logVerbose("Moving migrations files back to migrations dir...");
-        await this.moveFilesBackToMigrationsDir(filesToMove);
-      }
-    });
+          this.logger.logVerbose(
+            `All migrations to ${targetMigration} have been applied successfully!`,
+          );
+        } finally {
+          this.logger.logVerbose("Moving migrations files back to migrations dir...");
+          await this.moveFilesBackToMigrationsDir(filesToMove);
+        }
+      },
+      () => this.tempDirIsEmpty(),
+    );
   }
 }
