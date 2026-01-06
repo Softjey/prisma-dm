@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs";
 import { ConfigSchema } from "../config/config.type";
- 
 /**
  * Converts a SQLite URL from a Prisma schema to an absolute file path.
  */
@@ -21,14 +20,12 @@ export function prismaSqliteURLToFilePath(url: string, config: ConfigSchema): st
     try {
       const stats = fs.statSync(config.mainPrismaSchema);
       if (stats.isDirectory()) {
-         schemaDirPath = config.mainPrismaSchema;
+        schemaDirPath = config.mainPrismaSchema;
       } else {
-         schemaDirPath = path.dirname(config.mainPrismaSchema);
+        schemaDirPath = path.dirname(config.mainPrismaSchema);
       }
     } catch {
-       // If file doesn't exist (e.g. CI/CD?), fallback to dirname. 
-       // But verifying existence is better.
-       schemaDirPath = path.dirname(config.mainPrismaSchema);
+      schemaDirPath = path.dirname(config.mainPrismaSchema);
     }
 
     const absolutePath = path.resolve(schemaDirPath, prismaPath);
