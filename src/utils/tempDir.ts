@@ -20,11 +20,17 @@ async function removeTempDir(path: string) {
  * @param path - The path to the temporary directory.
  * @param fn - The async function to execute using the temporary directory.
  */
-export async function withTempDir(path: string, fn: () => Promise<void> | void) {
+export async function withTempDir(
+  path: string,
+  fn: () => Promise<void> | void,
+  canRemove: () => boolean | Promise<boolean>,
+) {
   await createTempDir(path);
   try {
     await fn();
   } finally {
-    await removeTempDir(path);
+    if (await canRemove()) {
+      await removeTempDir(path);
+    }
   }
 }

@@ -45,32 +45,40 @@ export class CLI<T extends string> {
       this.validator.isMigrationWithPrismaSchema(m),
     );
 
-    await withTempDir(this.config.tempDir, async () => {
-      const promises = migrationsWithSchemas.map(async (migrationName) => {
-        const migrationPath = path.join(migrationsDirPath, migrationName);
-        const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
-        let outputPath = `${this.config.outputDir}/${migrationName}`;
+    await withTempDir(
+      this.config.tempDir,
+      async () => {
+        const promises = migrationsWithSchemas.map(async (migrationName) => {
+          const migrationPath = path.join(migrationsDirPath, migrationName);
+          const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
+          let outputPath = `${this.config.outputDir}/${migrationName}`;
 
-        // If the path is relative, it is relative to the schema file inside the migration folder
-        if (!path.isAbsolute(outputPath)) {
-          outputPath = path.join(path.dirname(schemaPath), outputPath);
-        }
+          // If the path is relative, it is relative to the schema file inside the migration folder
+          if (!path.isAbsolute(outputPath)) {
+            outputPath = path.join(path.dirname(schemaPath), outputPath);
+          }
 
-        const tempSchemaPath = path.join(this.config.tempDir, migrationName, "schema.prisma");
-        await createTempSchema(
-          schemaPath,
-          outputPath,
-          this.dataSource,
-          tempSchemaPath,
-          this.config,
-        );
-        PrismaCLI.generate({ schema: tempSchemaPath });
+          const tempSchemaPath = path.join(
+            this.config.tempDir,
+            migrationName,
+            this.config.migrationSchemaFileName,
+          );
+          await createTempSchema(
+            schemaPath,
+            outputPath,
+            this.dataSource,
+            tempSchemaPath,
+            this.config,
+          );
+          PrismaCLI.generate({ schema: tempSchemaPath });
 
-        this.logger.logInfo(`Types generated for migration: ${migrationName}`);
-      });
+          this.logger.logInfo(`Types generated for migration: ${migrationName}`);
+        });
 
-      await Promise.all(promises);
-    });
+        await Promise.all(promises);
+      },
+      () => true,
+    );
 
     this.logger.logInfo("Types generation completed");
   }
