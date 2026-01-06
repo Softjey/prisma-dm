@@ -43,15 +43,11 @@ function createKnexConfig(dataSource: DataSourceConfig, config: ConfigSchema): K
 }
 
 export class DB {
-  private readonly knexConfig: Knex.Config;
   private knex?: Knex;
 
-  constructor(config: ConfigSchema, dataSource: DataSourceConfig) {
-    this.knexConfig = createKnexConfig(dataSource, config);
-  }
-
-  async connect() {
-    this.knex = knex(this.knexConfig);
+  async connect(datasource: DataSourceConfig, config: ConfigSchema) {
+    const knexConfig = createKnexConfig(datasource, config);
+    this.knex = knex(knexConfig);
   }
 
   async disconnect() {

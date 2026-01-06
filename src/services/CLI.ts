@@ -8,10 +8,10 @@ import { PrismaCLI } from "../utils/classes/PrismaCLI";
 import { createTempSchema } from "../utils/tempMigrationSchema";
 import { TargetedPrismaMigrator } from "./TargetedPrismaMigrator";
 import { ScriptRunner } from "./ScriptRunner";
-import { DataSourceConfig, DB } from "./DB";
+import { DB } from "./DB";
 import { Logger } from "./Logger";
 import { MigrationModel } from "../types/MigrationModel";
-import { withTempDir } from "../utils/tempDir";
+import { readDataSourceConfig } from "../utils/readDataSourceConfig";
 
 export class CLI<T extends string> {
   constructor(
@@ -21,7 +21,6 @@ export class CLI<T extends string> {
     private readonly validator: Validator,
     private readonly logger: Logger,
     private readonly config: ConfigSchema,
-    private readonly dataSource: DataSourceConfig,
   ) {}
 
   private getMigrationPath(migrationName: T) {
@@ -45,40 +44,29 @@ export class CLI<T extends string> {
       this.validator.isMigrationWithPrismaSchema(m),
     );
 
-    await withTempDir(
-      this.config.tempDir,
-      async () => {
-        const promises = migrationsWithSchemas.map(async (migrationName) => {
-          const migrationPath = path.join(migrationsDirPath, migrationName);
-          const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
-          let outputPath = `${this.config.outputDir}/${migrationName}`;
+    const promises = migrationsWithSchemas.map(async (migrationName) => {
+      const migrationPath = path.join(migrationsDirPath, migrationName);
+      const schemaPath = path.join(migrationPath, this.config.migrationSchemaFileName);
+      let outputPath = `${this.config.outputDir}/${migrationName}`;
 
-          // If the path is relative, it is relative to the schema file inside the migration folder
-          if (!path.isAbsolute(outputPath)) {
-            outputPath = path.join(path.dirname(schemaPath), outputPath);
-          }
+      // If the path is relative, it is relative to the schema file inside the migration folder
+      if (!path.isAbsolute(outputPath)) {
+        outputPath = path.join(path.dirname(schemaPath), outputPath);
+      }
 
-          const tempSchemaPath = path.join(
-            this.config.tempDir,
-            migrationName,
-            this.config.migrationSchemaFileName,
-          );
-          await createTempSchema(
-            schemaPath,
-            outputPath,
-            this.dataSource,
-            tempSchemaPath,
-            this.config,
-          );
-          PrismaCLI.generate({ schema: tempSchemaPath });
+      const tempSchemaFilename = `.tmp-migration-schema-${Math.random().toString(36).slice(2, 4)}_${migrationName}.prisma`;
+      const tempSchemaPath = path.join(migrationsDirPath, tempSchemaFilename);
+      await createTempSchema(schemaPath, outputPath, tempSchemaPath);
+      try {
+        PrismaCLI.generate({ schema: tempSchemaPath });
+      } finally {
+        fs.rmSync(tempSchemaPath);
+      }
 
-          this.logger.logInfo(`Types generated for migration: ${migrationName}`);
-        });
+      this.logger.logInfo(`Types generated for migration: ${migrationName}`);
+    });
 
-        await Promise.all(promises);
-      },
-      () => true,
-    );
+    await Promise.all(promises);
 
     this.logger.logInfo("Types generation completed");
   }
@@ -141,7 +129,9 @@ export class CLI<T extends string> {
       lastMigrationIndex + (includeTargetMigration ? 1 : 0),
     );
     const dataMigrations = migrations.filter((m) => this.validator.isMigrationWithPostScript(m));
-    await this.db.connect();
+
+    const dataSource = readDataSourceConfig(this.config.mainPrismaSchema);
+    await this.db.connect(dataSource, this.config);
 
     for (const migrationName of dataMigrations as T[]) {
       const prismaTableExists = await this.db.isPrismaMigrationsTableExists();

@@ -18,14 +18,13 @@ const program = new Command();
 
 function createCLI() {
   const { config } = new ConfigLoader();
-  const dataSource = readDataSourceConfig(config.mainPrismaSchema);
 
   const logger = new Logger(config);
-  const db = new DB(config, dataSource);
+  const db = new DB();
   const validator = new Validator(config);
   const scriptRunner = new ScriptRunner(config);
   const migrator = new TargetedPrismaMigrator(logger, config);
-  const cli = new CLI(migrator, scriptRunner, db, validator, logger, config, dataSource);
+  const cli = new CLI(migrator, scriptRunner, db, validator, logger, config);
 
   return cli;
 }
